@@ -13,7 +13,7 @@ setup(
     name='pyrefcount',
     version=release,
     author='Paul Mundt',
-    author_email='paul.mundt@adaptant,io',
+    author_email='paul.mundt@adaptant.io',
     license='MIT',
     url='https://github.com/pmundt/pyrefcount',
     packages=['refcount'],
