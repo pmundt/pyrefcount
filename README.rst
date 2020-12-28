@@ -19,7 +19,7 @@ Usage of pyrefcount is straightforward:
 >>> if ref.dec_and_test():
 ...     print('refcount is now 0, do something here')
 
-For more complex usage examples and a complete API reference, refer to the package documentation.
+For more complex usage examples and a complete API reference, refer to the `package documentation`_.
 
 Features and Bugs
 -----------------
@@ -31,5 +31,6 @@ License
 
 ``pyrefcount`` is licensed under the MIT license.
 
+.. _package documentation: https://pmundt.github.io/pyrefcount
 .. _refcount_t: https://github.com/torvalds/linux/blob/master/include/linux/refcount.h
 .. _issue tracker: https://github.com/pmundt/pyrefcount/issues
