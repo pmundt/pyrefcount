@@ -1,18 +1,20 @@
 pyrefcount
 ==========
 
-.. image:: https://img.shields.io/github/workflow/status/pmundt/pyrefcount/Python%20package
+|build| |license| |python-version| |pypi-version|
+
+.. |build| image:: https://img.shields.io/github/workflow/status/pmundt/pyrefcount/Python%20package
    :alt: GitHub Workflow Status
    :target: https://github.com/pmundt/pyrefcount/actions
 
-.. image:: https://img.shields.io/pypi/l/pyrefcount
+.. |license| image:: https://img.shields.io/pypi/l/pyrefcount
    :alt: MIT License
 
-.. image:: https://img.shields.io/pypi/pyversions/pyrefcount
+.. |python-version| image:: https://img.shields.io/pypi/pyversions/pyrefcount
    :alt: PyPI - Python Version
    :target: https://pypi.python.org/pypi/pyrefcount
 
-.. image:: https://img.shields.io/pypi/v/pyrefcount
+.. |pypi-version| image:: https://img.shields.io/pypi/v/pyrefcount
    :alt: PyPI
    :target: https://pypi.python.org/pypi/pyrefcount
 
