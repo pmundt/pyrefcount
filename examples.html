@@ -1,0 +1,469 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Examples &mdash; pyrefcount  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="APIs" href="refcount.html" />
+    <link rel="prev" title="refcount Overflow/Underflow" href="overflow_underflow.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> pyrefcount
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="README.html">pyrefcount</a></li>
+<li class="toctree-l1"><a class="reference internal" href="overflow_underflow.html">refcount Overflow/Underflow</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#producer-consumer-example">Producer/Consumer Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#instance-manager-example">Instance Manager Example</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="refcount.html">APIs</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">pyrefcount</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Examples</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            
+              <a href="https://github.com/pmundt/pyrefcount/blob/master/docs/examples.rst" class="fa fa-github"> Edit on GitHub</a>
+            
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="examples">
+<h1>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="producer-consumer-example">
+<h2>Producer/Consumer Example<a class="headerlink" href="#producer-consumer-example" title="Permalink to this headline">¶</a></h2>
+<p>As a simple example, we consider a class that uses a producer/consumer or publish/subscribe pattern, where we only wish
+to launch the producer/publishing thread when consumers/subscribers have dynamically attached themselves to the class
+instance. As this may happen at any time, a <code class="docutils literal notranslate"><span class="pre">Refcounter</span></code> is used for determining when to start and stop the thread:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">threading</span>
+<span class="kn">import</span> <span class="nn">time</span>
+
+<span class="kn">from</span> <span class="nn">refcount</span> <span class="kn">import</span> <span class="n">Refcounter</span>
+
+
+<span class="k">class</span> <span class="nc">StoppableThread</span><span class="p">(</span><span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_stopper</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Event</span><span class="p">()</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">stop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_stopper</span><span class="o">.</span><span class="n">set</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stopper</span><span class="o">.</span><span class="n">isSet</span><span class="p">():</span>
+                <span class="k">return</span>
+            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;iter from producer thread&#39;</span><span class="p">)</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">ProducerClass</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># Set the initial refcount to 0 instead of the default 1, the initial consumer</span>
+        <span class="c1"># addition and producer thread launch is special-cased by add_consumer(). Special</span>
+        <span class="c1"># care needs to be taken in this case, as any decrement operations will raise an</span>
+        <span class="c1"># immediate underflow exception.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">consumers</span> <span class="o">=</span> <span class="n">Refcount</span><span class="p">(</span><span class="n">usecount</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">thread</span> <span class="o">=</span> <span class="bp">None</span>
+
+    <span class="k">def</span> <span class="nf">add_consumer</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Adding consumer, refcount before inc&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">consumers</span><span class="o">.</span><span class="n">refcount</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">consumers</span><span class="o">.</span><span class="n">inc_not_zero</span><span class="p">()</span> <span class="o">==</span> <span class="bp">False</span><span class="p">:</span>
+            <span class="c1"># If the refcount is zero, manually increment it and launch the producer thread</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">consumers</span><span class="o">.</span><span class="n">inc</span><span class="p">()</span>
+
+            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Starting producer thread&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">thread</span> <span class="o">=</span> <span class="n">StoppableThread</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">del_consumer</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Deleting consumer: refcount before dec&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">consumers</span><span class="o">.</span><span class="n">usecount</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">consumers</span><span class="o">.</span><span class="n">dec_and_test</span><span class="p">():</span>
+            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;All consumers have exited, stopping producer thread&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">thread</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">thread</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>The two most straightforward scenarios to consider are:</p>
+<ul class="simple">
+<li>Adding/removing a single consumer</li>
+<li>Adding/removing multiple consumers</li>
+</ul>
+<p>these are briefly exemplified below. To begin with, instantiate the <code class="docutils literal notranslate"><span class="pre">ProducerClass()</span></code> and add an initial consumer:</p>
+<div class="highlight-pycon notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">producer</span> <span class="o">=</span> <span class="n">ProducerClass</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">producer</span><span class="o">.</span><span class="n">add_consumer</span><span class="p">()</span> <span class="c1"># Add an initial consumer</span>
+<span class="go">Adding consumer, refcount before inc 0</span>
+<span class="go">Starting producer thread</span>
+</pre></div>
+</div>
+<p>we can now sleep for a couple of seconds and see the worker thread iterate:</p>
+<div class="highlight-pycon notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="go">iter from producer thread</span>
+<span class="go">iter from producer thread</span>
+</pre></div>
+</div>
+<p>Followed by removing the consumer and observing the thread shutdown:</p>
+<div class="highlight-pycon notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">producer</span><span class="o">.</span><span class="n">del_consumer</span><span class="p">()</span>
+<span class="go">Deleting consumer, refcount before dec 1</span>
+<span class="go">All consumers have exited, stopping producer thread</span>
+</pre></div>
+</div>
+<p>The multi-consumer case is identical, with the refcount reflecting the active number of consumers, and the thread
+shutdown not being triggered until all have exited:</p>
+<div class="highlight-pycon notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">producer</span><span class="o">.</span><span class="n">add_consumer</span><span class="p">()</span>
+<span class="go">Adding consumer, refcount before inc 0</span>
+<span class="go">Starting producer thread</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">producer</span><span class="o">.</span><span class="n">add_consumer</span><span class="p">()</span>
+<span class="go">Adding consumer, refcount before inc 1</span>
+<span class="go"># do some work</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">producer</span><span class="o">.</span><span class="n">del_consumer</span><span class="p">()</span>
+<span class="go">Deleting consumer, refcount before dec 2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">producer</span><span class="o">.</span><span class="n">del_consumer</span><span class="p">()</span>
+<span class="go">Deleting consumer, refcount before dec 1</span>
+<span class="go">All consumers have exited, stopping producer thread</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">While this case has exemplified <cite>on-demand</cite> spawning and shutdown of a single worker thread in response to
+consumer add/remove events, more complex real-world cases can also use the <code class="docutils literal notranslate"><span class="pre">usecount</span></code> value as a basis for
+determining the number of worker threads to spawn, either directly, or as part of a thread pool.</p>
+</div>
+</div>
+<div class="section" id="instance-manager-example">
+<h2>Instance Manager Example<a class="headerlink" href="#instance-manager-example" title="Permalink to this headline">¶</a></h2>
+<p>When using an <a class="reference external" href="https://wiki.c2.com/?InstanceManagerPattern">instance manager pattern</a>, the manager may wish to modify
+its behaviour dependent upon specific attributes set in instances under management. As the behaviour may be
+computationally expensive (e.g. the conversion of large pandas DataFrames to cuDF ones), it is advantageous to be able
+to avoid it entirely when there are no managed instances that depend on it.</p>
+<p>An example of an <code class="docutils literal notranslate"><span class="pre">InstanceManager</span></code> class and managed subclasses that expect different data types to be handed down is
+provided below (note that type conversion is only carried out when subclasses that require it are being managed):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">refcount</span> <span class="kn">import</span> <span class="n">Refcounter</span>
+<span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
+
+
+<span class="k">class</span> <span class="nc">ParentClass</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+   <span class="nd">@abstractmethod</span>
+   <span class="k">def</span> <span class="nf">execute</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+
+<span class="k">class</span> <span class="nc">NormalType</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">value</span>
+
+
+<span class="k">class</span> <span class="nc">ExpensiveType</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">from_normal</span><span class="p">(</span><span class="n">normal</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">ExpensiveType</span><span class="p">(</span><span class="n">normal</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">NormalSubclass</span><span class="p">(</span><span class="n">ParentClass</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="c1"># Do something with NormalType data</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">NormalType</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">ExpensiveSubclass</span><span class="p">(</span><span class="n">ParentClass</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># Set an attribute that will trigger type conversion in the instance manager</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">example_attr</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="c1"># Do something with ExpensiveType data</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">ExpensiveType</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">InstanceManager</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instances</span><span class="p">):</span>
+        <span class="c1"># Do not carry out type conversion by default</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">convert_data</span> <span class="o">=</span> <span class="bp">False</span>
+
+        <span class="c1"># Initialize refcount with 0 users. The first inc() will trigger the</span>
+        <span class="c1"># acquire callback and set the convert_data flag.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">converted_data_users</span> <span class="o">=</span> <span class="n">Refcounter</span><span class="p">(</span><span class="n">usecount</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                                               <span class="n">acquire</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">set_convert_data</span><span class="p">,</span>
+                                               <span class="n">release</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">clear_convert_data</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">instances</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">instance</span> <span class="ow">in</span> <span class="n">instances</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">add_instance</span><span class="p">(</span><span class="n">instance</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">do_something</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">NormalType</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">convert_data</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Manager performing type conversion&#39;</span><span class="p">)</span>
+
+            <span class="c1"># Carry out data type conversion for the instances that need it</span>
+            <span class="n">expensive_data</span> <span class="o">=</span> <span class="n">ExpensiveType</span><span class="o">.</span><span class="n">from_normal</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Manager not performing type conversion&#39;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">instance</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">instances</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="s1">&#39;example_attr&#39;</span><span class="p">):</span>
+                <span class="n">instance</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">expensive_data</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">instance</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">set_convert_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">convert_data</span> <span class="o">=</span> <span class="bp">True</span>
+
+    <span class="k">def</span> <span class="nf">clear_convert_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">convert_data</span> <span class="o">=</span> <span class="bp">False</span>
+
+    <span class="k">def</span> <span class="nf">add_instance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instance</span><span class="p">):</span>
+        <span class="c1"># Check for data conversion attribute in subclass instances</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="s1">&#39;example_attr&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">convert_data_users</span><span class="o">.</span><span class="n">inc</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">instances</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">instance</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">remove_instance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instance</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">instances</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="n">instance</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="s1">&#39;example_attr&#39;</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">convert_data_users</span><span class="o">.</span><span class="n">dec</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">instances</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">instance</span><span class="p">)</span>
+                <span class="k">return</span>
+</pre></div>
+</div>
+<p>To see this in practice, we first instantiate the <code class="docutils literal notranslate"><span class="pre">InstanceManager</span></code> with a couple of <code class="docutils literal notranslate"><span class="pre">NormalSubclass</span></code> instances:</p>
+<div class="highlight-pycon notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">manager</span> <span class="o">=</span> <span class="n">InstanceManager</span><span class="p">(</span><span class="n">instances</span><span class="o">=</span><span class="p">[</span><span class="n">NormalSubclass</span><span class="p">(),</span> <span class="n">NormalSubclass</span><span class="p">()])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">manager</span><span class="o">.</span><span class="n">do_something</span><span class="p">()</span>
+<span class="go">Manager not performing type conversion</span>
+</pre></div>
+</div>
+<p>Next, add a couple of <code class="docutils literal notranslate"><span class="pre">ExpensiveSubclass</span></code> instances:</p>
+<div class="highlight-pycon notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">expensive</span> <span class="o">=</span> <span class="n">ExpensiveSubclass</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">manager</span><span class="o">.</span><span class="n">add_instance</span><span class="p">(</span><span class="n">expensive</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">expensive2</span> <span class="o">=</span> <span class="n">ExpensiveSubClass</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">manager</span><span class="o">.</span><span class="n">add_instance</span><span class="p">(</span><span class="n">expensive2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">manager</span><span class="o">.</span><span class="n">do_something</span><span class="p">()</span>
+<span class="go">Manager performing type conversion</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">manager</span><span class="o">.</span><span class="n">convert_data_users</span><span class="o">.</span><span class="n">usecount</span>
+<span class="go">2</span>
+</pre></div>
+</div>
+<p>internally this sets up the <code class="docutils literal notranslate"><span class="pre">convert_data_users</span></code> attr as a refcount object, while the <code class="docutils literal notranslate"><span class="pre">hasattr</span></code> check in the
+<code class="docutils literal notranslate"><span class="pre">add_instance()</span></code> method increments the use count for each <code class="docutils literal notranslate"><span class="pre">ExpensiveSubclass</span></code> instance. The reference count
+matches the number of added instances satisfying the attribute check. Now remove one instance:</p>
+<div class="highlight-pycon notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">manager</span><span class="o">.</span><span class="n">remove_instance</span><span class="p">(</span><span class="n">expensive</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">manager</span><span class="o">.</span><span class="n">do_something</span><span class="p">()</span>
+<span class="go">Manager performing type conversion</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">manager</span><span class="o">.</span><span class="n">convert_data_users</span><span class="o">.</span><span class="n">usecount</span>
+<span class="go">1</span>
+</pre></div>
+</div>
+<p>the instance is removed and the refcount is decremented, but the behaviour remains unchanged as there is still
+a remaining user. The last user can now be removed:</p>
+<div class="highlight-pycon notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">manager</span><span class="o">.</span><span class="n">remove_instance</span><span class="p">(</span><span class="n">expensive2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">manager</span><span class="o">.</span><span class="n">do_something</span><span class="p">()</span>
+<span class="go">Manager not performing type conversion</span>
+</pre></div>
+</div>
+<p>the reference count is dropped to 0, causing the <code class="docutils literal notranslate"><span class="pre">convert_data</span></code> flag to be cleared by the release callback. Normal
+operating behaviour is resumed. As expected, re-adding an <code class="docutils literal notranslate"><span class="pre">ExpensiveSubclass</span></code> instance triggers the behaviour
+modification again:</p>
+<div class="highlight-pycon notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">manager</span><span class="o">.</span><span class="n">add_instance</span><span class="p">(</span><span class="n">ExpensiveSubclass</span><span class="p">())</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">manager</span><span class="o">.</span><span class="n">do_something</span><span class="p">()</span>
+<span class="go">Manager performing type conversion</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">None of the assertions were triggered during the execution flow, indicating that each managed instance
+received the data type in the format it requires.</p>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="refcount.html" class="btn btn-neutral float-right" title="APIs" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="overflow_underflow.html" class="btn btn-neutral float-left" title="refcount Overflow/Underflow" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Paul Mundt
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
