@@ -23,6 +23,7 @@ project = 'pyrefcount'
 copyright = '2020, Paul Mundt'
 author = 'Paul Mundt'
 
+master_doc = 'index'
 
 # -- General configuration ---------------------------------------------------
 
